@@ -48,7 +48,7 @@ func NewLoadingPage(size int, period time.Duration) *LoadingPage {
 		size:     size,
 		period:   period,
 		lastTime: time.Now(),
-		r:        NewOscilator(time.Second * 1),
+		r:        NewOscilator(time.Second * 2),
 		g:        NewOscilator(time.Second * 3),
 		b:        NewOscilator(time.Second * 5),
 		adding:   true,
