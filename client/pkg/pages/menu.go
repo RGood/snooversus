@@ -5,6 +5,9 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/text"
+
+	"golang.org/x/image/font/basicfont"
 )
 
 type MenuPage struct {
@@ -55,14 +58,15 @@ func (mp *MenuPage) Draw(screen *ebiten.Image) {
 	// screen.DrawImage(mouseBox, mouseOpts)
 
 	intersectRect := boxRect.Intersect(mouseRect)
-
-	if (intersectRect.Dx() != 0) {
+	isMouseOverBox := intersectRect.Dx() != 0
+	if (isMouseOverBox) {
 		box.Fill(color.RGBA64{0xFFFF, 0x0, 0x0, 0xFFFF})
 	}
 
-	if (ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)) {
+	if (isMouseOverBox && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)) {
 		box.Fill(color.RGBA64{0x0, 0x0, 0xFFFF, 0xFFFF})
 	}
 
+	text.Draw(box, "Hello", basicfont.Face7x13, 5, 20, color.RGBA64{0x0, 0x0, 0x0, 0xFFFF})
 	screen.DrawImage(box, opts)
 }
