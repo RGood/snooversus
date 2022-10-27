@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/RGood/snooverse-client/pkg/pages"
@@ -43,7 +44,7 @@ func main() {
 	game := game{
 		pages:      []page{},
 		// activePage: pages.NewLoadingPage(50, time.Second),
-		activePage: pages.NewMenuPage(),
+		activePage: pages.NewMenuPage(func() { fmt.Println("HELLO WORLD")}),
 		width:      900,
 		height:     800,
 	}

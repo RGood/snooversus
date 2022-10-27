@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 
 	"golang.org/x/image/font/basicfont"
@@ -12,35 +13,23 @@ import (
 
 type MenuPage struct {
 	UnimplementedPage
-	x, y int
-	hovered bool
+	box image.Rectangle
+	isMouseOverBox bool
+	onclick func()
 }
 
-func NewMenuPage() *MenuPage {
+func NewMenuPage(onclick func()) *MenuPage {
 	return &MenuPage{
-		x: 50,
-		y: 50,
-		hovered: false,
+		box: image.Rectangle{
+			Min: image.Point{50, 50},
+			Max: image.Point{100, 100},
+		},
+		isMouseOverBox: false,
+		onclick: onclick,
 	}
 }
 
 func (mp *MenuPage) Update() error {
-	return nil
-}
-
-func (mp *MenuPage) Draw(screen *ebiten.Image) {
-	screen.Clear()
-
-	// menu box
-	boxRect := image.Rectangle{
-		Min: image.Point{50, 50},
-		Max: image.Point{100, 100},
-	}
-
-	box := ebiten.NewImage(boxRect.Dx(), boxRect.Dy())
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(boxRect.Min.X), float64(boxRect.Min.Y))
-	box.Fill(color.RGBA64{0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF})
 
 	// cursor box
 	cursorX, cursorY := ebiten.CursorPosition()
@@ -50,6 +39,23 @@ func (mp *MenuPage) Draw(screen *ebiten.Image) {
 		Max: image.Point{cursorX + 1, cursorY + 1},
 	}
 
+	intersectRect := mp.box.Intersect(mouseRect)
+	mp.isMouseOverBox = intersectRect.Dx() != 0
+
+	if (mp.isMouseOverBox && inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft)) {
+		mp.onclick()
+	}
+	return nil
+}
+
+func (mp *MenuPage) Draw(screen *ebiten.Image) {
+	screen.Clear()
+
+	box := ebiten.NewImage(mp.box.Dx(), mp.box.Dy())
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(mp.box.Min.X), float64(mp.box.Min.Y))
+	box.Fill(color.RGBA64{0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF})
+
 	// for debugging purposes, the mouse box!
 	// mouseBox := ebiten.NewImage(mouseRect.Dx(), mouseRect.Dy())
 	// mouseBox.Fill(color.RGBA64{0x0, 0x0, 0xFFFF, 0xFFFF})
@@ -57,13 +63,11 @@ func (mp *MenuPage) Draw(screen *ebiten.Image) {
 	// mouseOpts.GeoM.Translate(float64(mouseRect.Min.X), float64(mouseRect.Min.Y))
 	// screen.DrawImage(mouseBox, mouseOpts)
 
-	intersectRect := boxRect.Intersect(mouseRect)
-	isMouseOverBox := intersectRect.Dx() != 0
-	if (isMouseOverBox) {
+	if (mp.isMouseOverBox) {
 		box.Fill(color.RGBA64{0xFFFF, 0x0, 0x0, 0xFFFF})
 	}
 
-	if (isMouseOverBox && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)) {
+	if (mp.isMouseOverBox && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)) {
 		box.Fill(color.RGBA64{0x0, 0x0, 0xFFFF, 0xFFFF})
 	}
 
