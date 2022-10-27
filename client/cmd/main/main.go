@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/RGood/snooverse-client/pkg/pages"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -43,7 +42,8 @@ func main() {
 
 	game := game{
 		pages:      []page{},
-		activePage: pages.NewLoadingPage(50, time.Second),
+		// activePage: pages.NewLoadingPage(50, time.Second),
+		activePage: pages.NewMenuPage(),
 		width:      900,
 		height:     800,
 	}
