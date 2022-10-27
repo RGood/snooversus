@@ -13,6 +13,7 @@ import (
 
 type MenuPage struct {
 	UnimplementedPage
+	fillColor color.RGBA64
 	box image.Rectangle
 	isMouseOverBox bool
 	onclick func()
@@ -20,6 +21,7 @@ type MenuPage struct {
 
 func NewMenuPage(onclick func()) *MenuPage {
 	return &MenuPage{
+		fillColor: color.RGBA64{0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF},
 		box: image.Rectangle{
 			Min: image.Point{50, 50},
 			Max: image.Point{100, 100},
@@ -54,7 +56,8 @@ func (mp *MenuPage) Draw(screen *ebiten.Image) {
 	box := ebiten.NewImage(mp.box.Dx(), mp.box.Dy())
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(mp.box.Min.X), float64(mp.box.Min.Y))
-	box.Fill(color.RGBA64{0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF})
+	// a little transparent
+	box.Fill(color.RGBA64{mp.fillColor.R, mp.fillColor.G, mp.fillColor.B, mp.fillColor.A/2})
 
 	// for debugging purposes, the mouse box!
 	// mouseBox := ebiten.NewImage(mouseRect.Dx(), mouseRect.Dy())
@@ -64,11 +67,11 @@ func (mp *MenuPage) Draw(screen *ebiten.Image) {
 	// screen.DrawImage(mouseBox, mouseOpts)
 
 	if (mp.isMouseOverBox) {
-		box.Fill(color.RGBA64{0xFFFF, 0x0, 0x0, 0xFFFF})
+		box.Fill(mp.fillColor)
 	}
 
 	if (mp.isMouseOverBox && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)) {
-		box.Fill(color.RGBA64{0x0, 0x0, 0xFFFF, 0xFFFF})
+		box.Fill(color.RGBA64{mp.fillColor.R, mp.fillColor.G, mp.fillColor.B, mp.fillColor.A/3})
 	}
 
 	text.Draw(box, "Hello", basicfont.Face7x13, 5, 20, color.RGBA64{0x0, 0x0, 0x0, 0xFFFF})
