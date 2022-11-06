@@ -8,58 +8,66 @@ import (
 )
 
 type Cursor struct {
-	clickCallbacks   map[ebiten.MouseButton]func(*Cursor)
-	releaseCallbacks map[ebiten.MouseButton]func(*Cursor)
+	clickables []Clickable
+	hovered    map[Clickable]struct{}
+	cr         image.Rectangle
 }
 
 func NewCursor() *Cursor {
 	return &Cursor{
-		map[ebiten.MouseButton]func(*Cursor){},
-		map[ebiten.MouseButton]func(*Cursor){},
+		[]Clickable{},
+		map[Clickable]struct{}{},
+		image.Rectangle{},
 	}
 }
 
-func (c *Cursor) Overlaps(r image.Rectangle) bool {
+func (c *Cursor) Overlaps() map[Clickable]struct{} {
 	cx, cy := ebiten.CursorPosition()
-	cursorRect := &image.Rectangle{
-		Min: image.Point{cx, cy},
-		Max: image.Point{cx + 1, cy + 1},
+	c.cr.Min.X = cx
+	c.cr.Min.Y = cy
+	c.cr.Max.X = cx + 1
+	c.cr.Max.Y = cy + 1
+
+	toReturn := map[Clickable]struct{}{}
+
+	for _, clickable := range c.clickables {
+		if c.cr.Intersect(clickable.Bounds()).Dx() > 0 {
+			toReturn[clickable] = struct{}{}
+		}
 	}
 
-	overlap := cursorRect.Intersect(r)
-	return overlap.Dx() > 0
-}
-
-func (c *Cursor) SetOnClick(btn ebiten.MouseButton, cb func(*Cursor)) {
-	c.clickCallbacks[btn] = cb
-}
-
-func (c *Cursor) ClearClick(btn ebiten.MouseButton) {
-	delete(c.clickCallbacks, btn)
-}
-
-func (c *Cursor) SetOnRelease(btn ebiten.MouseButton, cb func(*Cursor)) {
-	c.releaseCallbacks[btn] = cb
-}
-
-func (c *Cursor) ClearRelease(btn ebiten.MouseButton) {
-	delete(c.releaseCallbacks, btn)
+	return toReturn
 }
 
 func (c *Cursor) IsMouseButtonPressed(btn ebiten.MouseButton) bool {
 	return ebiten.IsMouseButtonPressed(btn)
 }
 
+func (c *Cursor) RegisterClickable(clickable Clickable) {
+	c.clickables = append(c.clickables, clickable)
+}
+
 func (c *Cursor) Update() {
-	for key, cb := range c.clickCallbacks {
-		if inpututil.IsMouseButtonJustPressed(key) {
-			cb(c)
+	overlaps := c.Overlaps()
+
+	for clickable, _ := range overlaps {
+		if _, ok := c.hovered[clickable]; !ok {
+			c.hovered[clickable] = struct{}{}
+			clickable.Hover()
 		}
 	}
 
-	for key, cb := range c.releaseCallbacks {
-		if inpututil.IsMouseButtonJustReleased(key) {
-			cb(c)
+	for hovered, _ := range c.hovered {
+		if _, ok := overlaps[hovered]; !ok {
+			hovered.Reset()
+		}
+	}
+
+	c.hovered = overlaps
+
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		for clickable, _ := range overlaps {
+			clickable.Click()
 		}
 	}
 }

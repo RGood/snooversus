@@ -5,6 +5,7 @@ import "github.com/hajimehoshi/ebiten/v2"
 type Page interface {
 	Update() error
 	Draw(*ebiten.Image)
+	Dimensions() (float64, float64)
 	mustEmbedUnimplementedPage()
 }
 

@@ -11,11 +11,17 @@ import (
 
 type Button[T any] struct {
 	image.Rectangle
+	opts       []ButtonOpt[T]
+	color      color.Color
+	text       string
+	textColor  color.Color
+	textPos    image.Point
+	textFont   font.Face
 	OnHover    func(*Button[T])
 	OnClick    func(*Button[T])
 	intercept  func(*T, ebiten.Image, ebiten.DrawImageOptions) (*ebiten.Image, *ebiten.DrawImageOptions)
-	cachedImg  *ebiten.Image
-	cachedOpts *ebiten.DrawImageOptions
+	CachedImg  *ebiten.Image
+	CachedOpts *ebiten.DrawImageOptions
 }
 
 type ButtonOpt[T any] interface {
@@ -27,7 +33,8 @@ type buttonFillColor[T any] struct {
 }
 
 func (bfc *buttonFillColor[T]) Apply(btn *Button[T]) *Button[T] {
-	btn.cachedImg.Fill(bfc.c)
+	btn.CachedImg.Fill(bfc.c)
+	btn.color = bfc.c
 	return btn
 }
 
@@ -43,7 +50,11 @@ type buttonText[T any] struct {
 }
 
 func (btc *buttonText[T]) Apply(btn *Button[T]) *Button[T] {
-	text.Draw(btn.cachedImg, btc.text, btc.font, btc.x, btc.y, btc.c)
+	btn.text = btc.text
+	btn.textColor = btc.c
+	btn.textPos = image.Pt(btc.x, btc.y)
+	btn.textFont = btc.font
+	text.Draw(btn.CachedImg, btc.text, btc.font, btc.x, btc.y, btc.c)
 	return btn
 }
 
@@ -66,12 +77,45 @@ func ButtonIntercept[T any](intercept func(*T, ebiten.Image, ebiten.DrawImageOpt
 	}
 }
 
-func NewButton[T any](bounds image.Rectangle, buttonOpts ...ButtonOpt[T]) *Button[T] {
+type buttonOnClick[T any] struct {
+	oc func(*Button[T])
+}
+
+func (boc *buttonOnClick[T]) Apply(btn *Button[T]) *Button[T] {
+	btn.OnClick = boc.oc
+	return btn
+}
+
+func ButtonOnClick[T any](oc func(*Button[T])) ButtonOpt[T] {
+	return &buttonOnClick[T]{oc}
+}
+
+type buttonOnHover[T any] struct {
+	oh func(*Button[T])
+}
+
+func (boh *buttonOnHover[T]) Apply(btn *Button[T]) *Button[T] {
+	btn.OnHover = boh.oh
+	return btn
+}
+
+func ButtonOnHover[T any](oc func(*Button[T])) ButtonOpt[T] {
+	return &buttonOnHover[T]{oc}
+}
+
+func NewButton[T any](x1, x2, y1, y2 int, buttonOpts ...ButtonOpt[T]) *Button[T] {
+	bounds := image.Rect(x1, y1, x2, y2)
 	cm := ebiten.NewImage(bounds.Dx(), bounds.Dy())
 	co := &ebiten.DrawImageOptions{}
 	co.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
 	btn := &Button[T]{
 		bounds,
+		buttonOpts,
+		nil,
+		"",
+		nil,
+		image.Point{},
+		nil,
 		nil,
 		nil,
 		nil,
@@ -83,14 +127,58 @@ func NewButton[T any](bounds image.Rectangle, buttonOpts ...ButtonOpt[T]) *Butto
 		btn = btnOpt.Apply(btn)
 	}
 
+	btn.Reset()
+
 	return btn
+}
+
+func (b *Button[T]) redraw() {
+	b.CachedImg.Clear()
+
+	if b.color != nil {
+		b.CachedImg.Fill(b.color)
+	}
+
+	if b.text != "" {
+		text.Draw(b.CachedImg, b.text, b.textFont, b.textPos.X, b.textPos.Y, b.textColor)
+	}
+}
+
+func (b *Button[T]) SetFill(c color.Color) {
+	b.color = c
+}
+
+func (b *Button[T]) SetText(text string, f font.Face, x, y int, c color.Color) {
+	b.text = text
+	b.textFont = f
+	b.textPos = image.Pt(x, y)
+	b.textColor = c
 }
 
 func (b *Button[T]) Draw(state *T, img *ebiten.Image) {
 	if b.intercept != nil {
-		img.DrawImage(b.intercept(state, *b.cachedImg, *b.cachedOpts))
+		img.DrawImage(b.intercept(state, *b.CachedImg, *b.CachedOpts))
 	} else {
-		img.DrawImage(b.cachedImg, b.cachedOpts)
+		img.DrawImage(b.CachedImg, b.CachedOpts)
 	}
+}
 
+func (b *Button[T]) Click() {
+	if b.OnClick != nil {
+		b.OnClick(b)
+	}
+}
+
+func (b *Button[T]) Hover() {
+	if b.OnHover != nil {
+		b.OnHover(b)
+	}
+	b.redraw()
+}
+
+func (b *Button[T]) Reset() {
+	b.CachedImg = ebiten.NewImage(b.Dx(), b.Dy())
+	for _, opt := range b.opts {
+		b = opt.Apply(b)
+	}
 }
